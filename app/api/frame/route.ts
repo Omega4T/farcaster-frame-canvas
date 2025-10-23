@@ -2,13 +2,13 @@ import { NextRequest,  } from 'next/server';
 import { createCanvas } from '@napi-rs/canvas';
 import { Redis } from '@upstash/redis';
 // Initialize Redis
-const redis = Redis.fromEnv();
 
 const CANVAS_SIZE = 16;
 const PIXEL_SIZE = 20;
 const CANVAS_KEY = 'frame-canvas-state';
 
 async function getCanvasState(): Promise<string[][]> {
+    const redis = Redis.fromEnv();
   const canvasString = await redis.get<string>(CANVAS_KEY);
   if (!canvasString) {
     const initialCanvas = Array(CANVAS_SIZE).fill(0).map(() => Array(CANVAS_SIZE).fill('#FFFFFF'));
