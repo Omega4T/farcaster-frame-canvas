@@ -1,5 +1,5 @@
 import { NextRequest,  } from 'next/server';
-import { createCanvas } from 'canvas';
+import { createCanvas } from '@napi-rs/canvas';
 import { Redis } from '@upstash/redis';
 // Initialize Redis
 const redis = Redis.fromEnv();

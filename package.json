@@ -9,9 +9,9 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@napi-rs/canvas": "^0.1.80",
     "@upstash/redis": "^1.35.6",
     "@vercel/kv": "^3.0.0",
-    "canvas": "^3.2.0",
     "next": "16.0.0",
     "react": "19.2.0",
     "react-dom": "19.2.0"
@@ -25,19 +25,5 @@
     "eslint-config-next": "16.0.0",
     "tailwindcss": "^4",
     "typescript": "^5"
-  },
-  "functions": {
-    "app/api/frame/route.ts": {
-      "includeFiles": "node_modules/canvas/build/Release/**"
-    }
-  },
-  "builds": [
-    {
-      "src": "package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "installCommand": "apt-get update && apt-get install -y build-essential libcairo2-dev libpango1.0-dev libjpeg-dev libgif-dev librsvg2-dev && npm install"
-      }
-    }
-  ]
+  }
 }
