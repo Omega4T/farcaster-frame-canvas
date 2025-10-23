@@ -2,42 +2,50 @@ import { NextRequest} from 'next/server';
 import { Redis } from '@upstash/redis';
 import { createCanvas } from 'canvas';
 
-// Initialize Redis - HANYA SATU CARA
-const redis = Redis.fromEnv();
-
 const CANVAS_SIZE = 16;
 const PIXEL_SIZE = 20;
 const CANVAS_KEY = 'frame-canvas-state';
 
-async function getCanvasState(): Promise<string[][] | null> { // Ubah return type agar bisa null
+async function getCanvasState(): Promise<string[][]> { // Kembalikan ke Promise<string[][]>
+  const redis = Redis.fromEnv();
+  
   console.log('Attempting to get canvas state from Redis...');
-  let canvasString: string | null = null;
-  let parsedCanvas: string[][] | null = null;
+  // Baca data tanpa menentukan tipe spesifik dulu
+  const redisData = await redis.get(CANVAS_KEY); 
+  console.log(`Raw data type from Redis: ${typeof redisData}`);
+  console.log('Raw data from Redis:', redisData);
 
-  try {
-    canvasString = await redis.get<string>(CANVAS_KEY);
-    console.log(`Raw data type from Redis: ${typeof canvasString}`); // Log tipe data
-    console.log('Raw data string from Redis:', canvasString); // Log string mentah
+  let canvasState: string[][] | null = null;
 
-    if (!canvasString) {
-      console.log('No canvas state found in Redis. Initializing...');
-      const initialCanvas = Array(CANVAS_SIZE).fill(0).map(() => Array(CANVAS_SIZE).fill('#FFFFFF'));
-      const initialCanvasString = JSON.stringify(initialCanvas);
-      await redis.set(CANVAS_KEY, initialCanvasString);
-      console.log('Successfully initialized canvas state.');
-      return initialCanvas; // Kembalikan array awal
-    } else {
-      console.log('Canvas state found. Attempting to parse...');
-      parsedCanvas = JSON.parse(canvasString);
-      console.log('Successfully parsed canvas state.');
-      return parsedCanvas; // Kembalikan array hasil parse
+  if (!redisData) {
+    console.log('No canvas state found in Redis. Initializing...');
+    canvasState = Array(CANVAS_SIZE).fill(0).map(() => Array(CANVAS_SIZE).fill('#FFFFFF'));
+    await redis.set(CANVAS_KEY, JSON.stringify(canvasState)); // Tetap simpan sebagai string
+    console.log('Successfully initialized canvas state.');
+  } else if (typeof redisData === 'object') {
+    // Jika SUDAH berupa objek (SDK Upstash otomatis parse), langsung gunakan
+    console.log('Redis data is already an object/array, using directly.');
+    canvasState = redisData as string[][]; // Kita beri tahu TypeScript tipenya
+  } else if (typeof redisData === 'string') {
+    // Jika masih berupa string, BARU kita parse
+    console.log('Redis data is a string. Attempting to parse...');
+    try {
+      canvasState = JSON.parse(redisData);
+      console.log('Successfully parsed canvas state string.');
+    } catch (parseError) {
+      console.error("Failed to parse canvas string from Redis:", parseError);
+      console.error("Invalid string was:", redisData);
+      // Jika parse gagal, kembalikan kanvas default
+      canvasState = Array(CANVAS_SIZE).fill(0).map(() => Array(CANVAS_SIZE).fill('#FF0000')); // Error state
     }
-  } catch (error) {
-    console.error('Error in getCanvasState:', error);
-    console.error('Data type that failed:', typeof canvasString); // Log tipe saat error
-    console.error('String that failed to parse:', canvasString); // Log string saat error
-    return null; // Kembalikan null jika ada error
+  } else {
+      // Tipe data tidak dikenal
+      console.error("Unexpected data type received from Redis:", typeof redisData);
+      canvasState = Array(CANVAS_SIZE).fill(0).map(() => Array(CANVAS_SIZE).fill('#FFA500')); // Warna oranye tanda tipe aneh
   }
+
+  // Pastikan kita selalu mengembalikan array 2D
+  return canvasState || Array(CANVAS_SIZE).fill(0).map(() => Array(CANVAS_SIZE).fill('#FFFFFF'));
 }
 
 function drawCanvas(canvasState: string[][] | null): Buffer | null { // Terima null
